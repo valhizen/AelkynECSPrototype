@@ -8,14 +8,29 @@ fn main() {
     let mut world = World::new();
 
     let player = world.spawn();
-    world.insert_health(player, Health::new(100, 100));
-    world.insert_tag(player, Tag::new("Valhizen"));
+
+    world.insert(player, Health::new(100, 100));
+    world.insert(player, Tag::new("Valhizen"));
 
     let goblin = world.spawn();
-    world.insert_health(goblin, Health::new(20, 20));
-    world.insert_tag(goblin, Tag::new("Goblin"));
 
-    world.deal_damage(goblin, 15);
+    world.insert(goblin, Health::new(20, 20));
+    world.insert(goblin, Tag::new("Goblin"));
 
-    world.print_value();
+    world.read_value(player);
+    world.read_value(goblin);
+
+    if let Some(h) = world.get::<Health>(player) {
+        println!("Health: {} / {}", h.current, h.max);
+    }
+
+    if let Some(t) = world.get::<Tag>(player) {
+        println!("Name: {}", t.tag);
+    }
+
+    world.deal_damage(goblin, 10);
+
+    if let Some(h) = world.get::<Health>(goblin) {
+        println!("Health: {} / {}", h.current, h.max);
+    }
 }
