@@ -1,5 +1,4 @@
 use std::fmt;
-
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Entity {
     pub id: u32,
@@ -59,5 +58,13 @@ impl EntityAllocator {
         idx < self.generations.len()
             && self.generations[idx] == entity.generation
             && self.alive[idx]
+    }
+
+    pub fn get_entity(&self, id: u32) -> Option<Entity> {
+        if (id as usize) < self.generations.len() && self.alive[id as usize] {
+            Some(Entity::new(id, self.generations[id as usize]))
+        } else {
+            None
+        }
     }
 }

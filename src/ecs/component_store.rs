@@ -1,8 +1,26 @@
 use std::any::Any;
 use std::{any::TypeId, collections::HashMap};
 
+trait ComponentMap {
+    fn remove(&mut self, id: u32);
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+}
+
+impl<T: 'static> ComponentMap for HashMap<u32, T> {
+    fn remove(&mut self, id: u32) {
+        self.remove(&id);
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
 pub struct ComponentStore {
-    storage: HashMap<TypeId, Box<dyn Any>>,
+    storage: HashMap<TypeId, Box<dyn ComponentMap>>,
 }
 
 impl ComponentStore {
@@ -26,6 +44,7 @@ impl ComponentStore {
         // downcast Box<dyn Any> to &mut HashMap<u32, T>
 
         let map = storage
+            .as_any_mut()
             .downcast_mut::<HashMap<u32, T>>()
             .expect("type mismatch in component storage");
 
@@ -36,14 +55,35 @@ impl ComponentStore {
     pub fn get<T: 'static>(&self, id: u32) -> Option<&T> {
         let type_id = TypeId::of::<T>();
         let boxed = self.storage.get(&type_id)?;
-        let map = boxed.downcast_ref::<HashMap<u32, T>>()?;
+        let map = boxed.as_any().downcast_ref::<HashMap<u32, T>>()?;
         map.get(&id)
     }
 
     pub fn get_mut<T: 'static>(&mut self, id: u32) -> Option<&mut T> {
         let type_id = TypeId::of::<T>();
         let boxed = self.storage.get_mut(&type_id)?;
-        let map = boxed.downcast_mut::<HashMap<u32, T>>()?;
+        let map = boxed.as_any_mut().downcast_mut::<HashMap<u32, T>>()?;
         map.get_mut(&id)
+    }
+
+    pub fn iter<T: 'static>(&self) -> impl Iterator<Item = (u32, &T)> {
+        let type_id = TypeId::of::<T>();
+
+        // Try to get and downcast the inner HashMap
+        let maybe_map = self
+            .storage
+            .get(&type_id)
+            .and_then(|boxed| boxed.as_any().downcast_ref::<HashMap<u32, T>>());
+
+        // If it exists, iterate it. If not, iterate an empty slice.
+        maybe_map
+            .into_iter()
+            .flat_map(|map| map.iter().map(|(&id, val)| (id, val)))
+    }
+
+    pub fn remove_all(&mut self, id: u32) {
+        for store in self.storage.values_mut() {
+            store.remove(id);
+        }
     }
 }

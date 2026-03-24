@@ -1,11 +1,12 @@
 use super::component_store::ComponentStore;
-use super::components::health::Health;
 use super::entities::Entity;
 use super::entities::EntityAllocator;
+use super::resource::Resource;
 
 pub struct World {
     allocator: EntityAllocator,
     components: ComponentStore,
+    resource: Resource,
 }
 
 impl World {
@@ -13,6 +14,7 @@ impl World {
         Self {
             allocator: EntityAllocator::new(),
             components: ComponentStore::new(),
+            resource: Resource::new(),
         }
     }
 
@@ -21,7 +23,12 @@ impl World {
     }
 
     pub fn despawn(&mut self, entity: Entity) -> bool {
-        self.allocator.free(entity)
+        if self.allocator.free(entity) {
+            self.components.remove_all(entity.id);
+            true
+        } else {
+            false
+        }
     }
 
     pub fn insert<T: 'static>(&mut self, entity: Entity, component: T) {
@@ -42,9 +49,50 @@ impl World {
         println!("{}", entity.id);
     }
 
-    pub fn deal_damage(&mut self, entity: Entity, amount: u32) {
-        if let Some(health) = self.get_mut::<Health>(entity) {
-            health.take_damage(amount);
-        }
+    pub fn iter<T: 'static>(&self) -> Vec<(Entity, &T)> {
+        self.components
+            .iter::<T>()
+            .filter_map(|(id, val)| {
+                let entity = self.allocator.get_entity(id)?;
+                Some((entity, val))
+            })
+            .collect()
+    }
+
+    pub fn get_by_id<T: 'static>(&self, id: u32) -> Option<&T> {
+        self.components.get(id)
+    }
+
+    pub fn insert_resource<T: 'static>(&mut self, value: T) {
+        self.resource.insert(value);
+    }
+
+    pub fn get_resource<T: 'static>(&self) -> Option<&T> {
+        self.resource.get()
+    }
+
+    pub fn get_resource_mut<T: 'static>(&mut self) -> Option<&mut T> {
+        self.resource.get_mut()
+    }
+
+    pub fn query2<A: 'static, B: 'static>(&self) -> Vec<(Entity, &A, &B)> {
+        self.iter::<A>()
+            .into_iter()
+            .filter_map(|(entity, a)| {
+                let b = self.get::<B>(entity)?;
+                Some((entity, a, b))
+            })
+            .collect()
+    }
+
+    pub fn query3<A: 'static, B: 'static, C: 'static>(&self) -> Vec<(Entity, &A, &B, &C)> {
+        self.iter::<A>()
+            .into_iter()
+            .filter_map(|(entity, a)| {
+                let b = self.get::<B>(entity)?;
+                let c = self.get::<C>(entity)?;
+                Some((entity, a, b, c))
+            })
+            .collect()
     }
 }
