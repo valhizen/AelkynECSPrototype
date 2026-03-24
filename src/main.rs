@@ -1,5 +1,9 @@
 mod ecs;
+mod gpu;
+mod engine;
+
 use ecs::world::World;
+
 
 use crate::ecs::components::health::Health;
 use crate::ecs::components::tag::Tag;
