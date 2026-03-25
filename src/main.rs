@@ -1,25 +1,27 @@
-mod ecs;
-mod gpu;
-mod engine;
+use winit::event_loop::{ControlFlow, EventLoop};
 
-use ecs::world::World;
-
-
-use crate::ecs::components::health::Health;
-use crate::ecs::components::tag::Tag;
+pub mod ecs;
+pub mod engine;
+pub mod gpu;
+pub mod systems;
 
 fn main() {
-    let mut world = World::new();
+    // NOTE: tracing calls (info!, error!) are silent until a subscriber is set up.
+    // Add tracing-subscriber when you want to see log output.
 
-    let player = world.spawn();
-    world.insert(player, Health::new(100, 100));
-    world.insert(player, Tag::new("Valhizen"));
+    // Create the OS event loop
+    let event_loop = EventLoop::new().unwrap();
 
-    let goblin = world.spawn();
-    world.insert(goblin, Health::new(20, 20));
-    world.insert(goblin, Tag::new("Goblin"));
+    // Tell it to constantly poll so game loop runs forever
+    event_loop.set_control_flow(ControlFlow::Poll);
 
-    for (entity, h, t) in world.query2::<Health, Tag>() {
-        println!("{} has {} / {} hp", t.tag, h.current, h.max);
+    // Create App
+    let mut app = engine::app::App::new();
+
+    // Hand complete control over to app.rs
+
+    if let Err(e) = event_loop.run_app(&mut app) {
+        tracing::error!("Event loop error: {e}");
+        std::process::exit(1);
     }
 }

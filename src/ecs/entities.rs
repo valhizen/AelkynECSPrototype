@@ -47,6 +47,14 @@ impl EntityAllocator {
     pub fn free(&mut self, entity: Entity) -> bool {
         let idx = entity.id as usize;
 
+        if idx >= self.generations.len() {
+            return false;
+        }
+
+        if self.generations[idx] != entity.generation || !self.alive[idx] {
+            return false;
+        }
+
         self.alive[idx] = false;
         self.generations[idx] += 1;
         self.free_ids.push(entity.id);
